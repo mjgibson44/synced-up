@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useGame } from '../../context/GameContext';
 import { Spectrum } from '../common/Spectrum';
-import { Timer } from '../common/Timer';
 
 export function GuessingPhase() {
   const { state, submitGuess, startNextRound, showFinalResults } = useGame();
@@ -22,9 +21,16 @@ export function GuessingPhase() {
 
   // Show round results if available (reviewing phase)
   if (state.roundResult) {
-    // Sort guesses by points (highest/best first)
-    const sortedGuesses = [...state.roundResult.guesses].sort((a, b) => b.points - a.points);
+    // Sort guesses by total game score (not round score)
+    const sortedGuesses = [...state.roundResult.guesses].sort((a, b) => {
+      const aTotalScore = state.scores.find(s => s.playerId === a.playerId)?.totalPoints ?? 0;
+      const bTotalScore = state.scores.find(s => s.playerId === b.playerId)?.totalPoints ?? 0;
+      return bTotalScore - aTotalScore;
+    });
     const actualPosition = state.roundResult.actualPosition;
+
+    // Get clue giver's total score
+    const authorTotalScore = state.scores.find(s => s.playerId === state.roundResult!.authorId)?.totalPoints ?? 0;
 
     return (
       <div className="guessing-phase results-view">
@@ -56,27 +62,46 @@ export function GuessingPhase() {
             </div>
           </div>
 
-          {/* Player guesses */}
-          {sortedGuesses.map((g, i) => (
-            <div key={g.playerId} className="guess-card">
-              <div className="guess-card-header">
-                <span className="guess-card-name">{g.playerName}</span>
-                <span className={`guess-card-score ${g.points >= 80 ? 'high' : ''}`}>
-                  {g.points === 100 ? 'Perfect! 100 pts' : `${g.points} pts`}
+          {/* Clue giver's score */}
+          <div className="guess-card clue-giver-card">
+            <div className="guess-card-header">
+              <span className="guess-card-name">{state.roundResult.authorName} <span className="clue-giver-label">(clue giver)</span></span>
+              <span className="guess-card-scores">
+                <span className={`guess-card-round-score ${state.roundResult.authorPoints >= 80 ? 'high' : ''}`}>
+                  +{state.roundResult.authorPoints}
                 </span>
-              </div>
-              <div className="guess-card-spectrum">
-                <div className="mini-spectrum">
-                  <div className="mini-spectrum-bar" />
-                  <div
-                    className="mini-spectrum-guess"
-                    style={{ left: `${g.guess}%`, backgroundColor: getPlayerColor(i) }}
-                    title={`Guess: ${g.guess}`}
-                  />
+                <span className="guess-card-total-score">({authorTotalScore} total)</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Player guesses */}
+          {sortedGuesses.map((g, i) => {
+            const totalScore = state.scores.find(s => s.playerId === g.playerId)?.totalPoints ?? 0;
+            return (
+              <div key={g.playerId} className="guess-card">
+                <div className="guess-card-header">
+                  <span className="guess-card-name">{g.playerName}</span>
+                  <span className="guess-card-scores">
+                    <span className={`guess-card-round-score ${g.points >= 80 ? 'high' : ''}`}>
+                      {g.points === 100 ? 'Perfect! +100' : `+${g.points}`}
+                    </span>
+                    <span className="guess-card-total-score">({totalScore} total)</span>
+                  </span>
+                </div>
+                <div className="guess-card-spectrum">
+                  <div className="mini-spectrum">
+                    <div className="mini-spectrum-bar" />
+                    <div
+                      className="mini-spectrum-guess"
+                      style={{ left: `${g.guess}%`, backgroundColor: getPlayerColor(i) }}
+                      title={`Guess: ${g.guess}`}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {state.currentRound < state.totalRounds && state.isHost && (
@@ -111,11 +136,6 @@ export function GuessingPhase() {
   if (isClueAuthor) {
     return (
       <div className="guessing-phase">
-        <div className="phase-header compact">
-          <span className="round-label">Round {state.currentRound} of {state.totalRounds}</span>
-          <Timer timeRemaining={state.timeRemaining} />
-        </div>
-
         <div className="round-info">
           <p className="clue-display">
             <span className="clue-author">Your clue:</span>
@@ -154,11 +174,6 @@ export function GuessingPhase() {
   // Regular player view - show spectrum labels and guess input
   return (
     <div className="guessing-phase">
-      <div className="phase-header compact">
-        <span className="round-label">Round {state.currentRound} of {state.totalRounds}</span>
-        <Timer timeRemaining={state.timeRemaining} />
-      </div>
-
       <div className="round-info">
         <p className="clue-display">
           <span className="clue-author">{state.currentAuthorName}'s clue:</span>

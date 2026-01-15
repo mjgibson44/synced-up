@@ -636,6 +636,43 @@ body {
   color: var(--success);
 }
 
+.guess-card-scores {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guess-card-round-score {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.guess-card-round-score.high {
+  color: var(--success);
+}
+
+.guess-card-total-score {
+  font-size: 14px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.clue-giver-card {
+  background: linear-gradient(135deg, var(--surface) 0%, rgba(138, 43, 226, 0.1) 100%);
+  border: 1px solid rgba(138, 43, 226, 0.3);
+}
+
+.clue-giver-card .guess-card-header {
+  margin-bottom: 0;
+}
+
+.clue-giver-label {
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
 .guess-card-spectrum {
   width: 100%;
 }
@@ -746,6 +783,12 @@ body {
 
 .score-bar-total {
   font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.score-bar-phase {
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 

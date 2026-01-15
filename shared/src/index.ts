@@ -44,6 +44,7 @@ export interface RoundResult {
   clue: string;
   authorId: string;
   authorName: string;
+  authorPoints: number; // Clue giver's score (median of guessers)
   actualPosition: number;
   guesses: Guess[];
 }

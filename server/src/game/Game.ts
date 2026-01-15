@@ -313,11 +313,22 @@ export class Game {
     return this.guesses.size === this.getExpectedGuessCount();
   }
 
-  // Calculate points from distance using cosine curve
+  // Calculate points from distance using quadratic curve
   private calculatePoints(distance: number): number {
-    // cos(x/32) * 100 - allows negative scores for far guesses
-    // 0 away = 100pts, 25 away = 71pts, 50 away = 0pts, 75 away = -62pts, 100 away = -100pts
-    return Math.round(Math.cos(distance / 32) * 100);
+    // 100 - 3.5d + d²/200 - rewards precision, penalizes far guesses
+    // 0 away = 100pts, 15 away = 49pts, 20 away = 32pts, 30 away = 0pts, 50 away = -62pts
+    return Math.round(100 - 3.5 * distance + (distance * distance) / 200);
+  }
+
+  // Calculate median of an array of numbers
+  private calculateMedian(values: number[]): number {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 0) {
+      return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+    }
+    return sorted[mid];
   }
 
   // Calculate results for the current round
@@ -346,6 +357,15 @@ export class Game {
       this.scores.set(playerId, playerScores);
     }
 
+    // Calculate clue giver's score as median of all guesses
+    const guesserPoints = guesses.map((g) => g.points);
+    const authorPoints = this.calculateMedian(guesserPoints);
+
+    // Award points to the clue giver
+    const authorScores = this.scores.get(currentClue.playerId) || [];
+    authorScores.push(authorPoints);
+    this.scores.set(currentClue.playerId, authorScores);
+
     // Sort guesses by points (highest first)
     guesses.sort((a, b) => b.points - a.points);
 
@@ -354,6 +374,7 @@ export class Game {
       clue: currentClue.clue,
       authorId: currentClue.playerId,
       authorName: currentClue.playerName,
+      authorPoints,
       actualPosition: currentClue.target,
       guesses,
     };

@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useGame } from '../../context/GameContext';
 import { Spectrum } from '../common/Spectrum';
-import { Timer } from '../common/Timer';
 
 export function GatheringPhase() {
   const { state, submitClue, regenerateSpectrum } = useGame();
@@ -35,19 +34,8 @@ export function GatheringPhase() {
     return <div className="loading">Loading...</div>;
   }
 
-  // Count how many of my clues I've submitted
-  const mySubmittedCount = state.myCluesSubmitted.filter((s) => s).length;
-
   return (
     <div className="gathering-phase">
-      <div className="phase-header gathering-header">
-        <Timer timeRemaining={state.timeRemaining} />
-        {state.cluesPerPlayer > 1 && (
-          <span className="clue-progress-inline">
-            Clue {mySubmittedCount + 1} of {state.cluesPerPlayer}
-          </span>
-        )}
-      </div>
 
       {!allSubmitted && currentSlot ? (
         <>
