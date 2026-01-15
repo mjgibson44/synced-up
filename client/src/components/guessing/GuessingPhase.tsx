@@ -21,16 +21,47 @@ export function GuessingPhase() {
 
   // Show round results if available (reviewing phase)
   if (state.roundResult) {
-    // Sort guesses by total game score (not round score)
-    const sortedGuesses = [...state.roundResult.guesses].sort((a, b) => {
-      const aTotalScore = state.scores.find(s => s.playerId === a.playerId)?.totalPoints ?? 0;
-      const bTotalScore = state.scores.find(s => s.playerId === b.playerId)?.totalPoints ?? 0;
-      return bTotalScore - aTotalScore;
-    });
     const actualPosition = state.roundResult.actualPosition;
 
-    // Get clue giver's total score
-    const authorTotalScore = state.scores.find(s => s.playerId === state.roundResult!.authorId)?.totalPoints ?? 0;
+    // Helper to format round score with proper +/- prefix
+    const formatRoundScore = (points: number) => {
+      if (points === 100) return 'Perfect! +100';
+      if (points >= 0) return `+${points}`;
+      return `${points}`; // Negative numbers already have minus sign
+    };
+
+    // Combine guessers and clue giver into one list for sorting
+    type PlayerResult = {
+      playerId: string;
+      playerName: string;
+      roundPoints: number;
+      totalScore: number;
+      isClueGiver: boolean;
+      guess?: number;
+    };
+
+    const allPlayers: PlayerResult[] = [
+      // Add clue giver
+      {
+        playerId: state.roundResult.authorId,
+        playerName: state.roundResult.authorName,
+        roundPoints: state.roundResult.authorPoints,
+        totalScore: state.scores.find(s => s.playerId === state.roundResult!.authorId)?.totalPoints ?? 0,
+        isClueGiver: true,
+      },
+      // Add all guessers
+      ...state.roundResult.guesses.map(g => ({
+        playerId: g.playerId,
+        playerName: g.playerName,
+        roundPoints: g.points,
+        totalScore: state.scores.find(s => s.playerId === g.playerId)?.totalPoints ?? 0,
+        isClueGiver: false,
+        guess: g.guess,
+      })),
+    ];
+
+    // Sort by total game score
+    allPlayers.sort((a, b) => b.totalScore - a.totalScore);
 
     return (
       <div className="guessing-phase results-view">
@@ -62,46 +93,35 @@ export function GuessingPhase() {
             </div>
           </div>
 
-          {/* Clue giver's score */}
-          <div className="guess-card clue-giver-card">
-            <div className="guess-card-header">
-              <span className="guess-card-name">{state.roundResult.authorName} <span className="clue-giver-label">(clue giver)</span></span>
-              <span className="guess-card-scores">
-                <span className={`guess-card-round-score ${state.roundResult.authorPoints >= 80 ? 'high' : ''}`}>
-                  +{state.roundResult.authorPoints}
+          {/* All players sorted by total score */}
+          {allPlayers.map((p, i) => (
+            <div key={p.playerId} className={`guess-card ${p.isClueGiver ? 'clue-giver-card' : ''}`}>
+              <div className="guess-card-header">
+                <span className="guess-card-name">
+                  {p.playerName}
+                  {p.isClueGiver && <span className="clue-giver-label"> (clue giver)</span>}
                 </span>
-                <span className="guess-card-total-score">({authorTotalScore} total)</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Player guesses */}
-          {sortedGuesses.map((g, i) => {
-            const totalScore = state.scores.find(s => s.playerId === g.playerId)?.totalPoints ?? 0;
-            return (
-              <div key={g.playerId} className="guess-card">
-                <div className="guess-card-header">
-                  <span className="guess-card-name">{g.playerName}</span>
-                  <span className="guess-card-scores">
-                    <span className={`guess-card-round-score ${g.points >= 80 ? 'high' : ''}`}>
-                      {g.points === 100 ? 'Perfect! +100' : `+${g.points}`}
-                    </span>
-                    <span className="guess-card-total-score">({totalScore} total)</span>
+                <span className="guess-card-scores">
+                  <span className={`guess-card-round-score ${p.roundPoints >= 80 ? 'high' : ''}`}>
+                    {formatRoundScore(p.roundPoints)}
                   </span>
-                </div>
+                  <span className="guess-card-total-score">({p.totalScore} total)</span>
+                </span>
+              </div>
+              {!p.isClueGiver && p.guess !== undefined && (
                 <div className="guess-card-spectrum">
                   <div className="mini-spectrum">
                     <div className="mini-spectrum-bar" />
                     <div
                       className="mini-spectrum-guess"
-                      style={{ left: `${g.guess}%`, backgroundColor: getPlayerColor(i) }}
-                      title={`Guess: ${g.guess}`}
+                      style={{ left: `${p.guess}%`, backgroundColor: getPlayerColor(i) }}
+                      title={`Guess: ${p.guess}`}
                     />
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              )}
+            </div>
+          ))}
         </div>
 
         {state.currentRound < state.totalRounds && state.isHost && (
