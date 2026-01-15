@@ -13,6 +13,13 @@ import {
   DEFAULT_CONFIG,
 } from 'shared';
 
+// Track pending disconnect timeouts to allow reconnection grace period
+// Key: playerId (socket.id), Value: { timeout, gameCode, playerName }
+const pendingDisconnects: Map<string, { timeout: NodeJS.Timeout; gameCode: string; playerName: string }> = new Map();
+
+// Grace period before removing disconnected players (60 seconds for mobile)
+const DISCONNECT_GRACE_PERIOD_MS = 60 * 1000;
+
 export function registerGameHandlers(io: Server, socket: Socket): void {
   const getBaseUrl = (): string => {
     // In production, this should be configured via environment variable
@@ -129,8 +136,35 @@ export function registerGameHandlers(io: Server, socket: Socket): void {
       return;
     }
 
+    // Cancel any pending disconnect timeout for this player (search by name since socket ID changed)
+    let oldSocketId: string | null = null;
+    for (const [socketId, pending] of pendingDisconnects) {
+      if (pending.gameCode === code && pending.playerName.toLowerCase() === playerName.trim().toLowerCase()) {
+        console.log(`Cancelling pending disconnect for ${playerName}, player is reconnecting`);
+        clearTimeout(pending.timeout);
+        pendingDisconnects.delete(socketId);
+        oldSocketId = socketId;
+        break;
+      }
+    }
+
+    // Find old socket ID from the game if not found in pending disconnects
+    if (!oldSocketId) {
+      for (const [playerId, p] of game.players) {
+        if (p.name.toLowerCase() === playerName.trim().toLowerCase()) {
+          oldSocketId = playerId;
+          break;
+        }
+      }
+    }
+
     // Try to rejoin as existing player
     const player = game.rejoinPlayer('', socket.id, playerName.trim());
+
+    // Update the player mapping in GameManager if we found the old socket ID
+    if (player && oldSocketId && oldSocketId !== socket.id) {
+      gameManager.updatePlayerMapping(oldSocketId, socket.id);
+    }
 
     if (!player) {
       socket.emit(ServerEvents.ERROR, {
@@ -438,18 +472,77 @@ export function registerGameHandlers(io: Server, socket: Socket): void {
     });
   });
 
-  // Leave game
+  // Leave game - explicit leave, remove immediately
   socket.on(ClientEvents.LEAVE_GAME, () => {
-    handlePlayerLeave(io, socket);
+    handlePlayerLeave(io, socket, true);
   });
 
-  // Handle disconnect
+  // Handle disconnect - may be temporary (mobile), use grace period
   socket.on('disconnect', () => {
-    handlePlayerLeave(io, socket);
+    handlePlayerDisconnect(io, socket);
   });
 }
 
-function handlePlayerLeave(io: Server, socket: Socket): void {
+// Handle temporary disconnect (mobile backgrounding, network issues)
+function handlePlayerDisconnect(io: Server, socket: Socket): void {
+  const game = gameManager.getGameByPlayerId(socket.id);
+
+  if (!game) return;
+
+  const player = game.getPlayer(socket.id);
+  if (!player) return;
+
+  // Mark player as disconnected
+  game.setPlayerConnected(socket.id, false);
+
+  console.log(`Player ${player.name} disconnected, starting grace period...`);
+
+  // Notify other players that this player disconnected (but not left)
+  socket.to(game.code).emit(ServerEvents.PLAYER_JOINED, {
+    players: game.getPlayersArray(),
+    newPlayer: player,
+  });
+
+  // Set up timeout to remove player if they don't reconnect
+  const timeout = setTimeout(() => {
+    console.log(`Grace period expired for ${player.name}, removing from game...`);
+    pendingDisconnects.delete(socket.id);
+
+    // Actually remove the player now
+    const result = gameManager.removePlayer(socket.id);
+    if (result) {
+      const { game: g, wasHost } = result;
+
+      io.to(g.code).emit(ServerEvents.PLAYER_LEFT, {
+        players: g.getPlayersArray(),
+        leftPlayerId: socket.id,
+      });
+
+      if (wasHost && g.players.size > 0) {
+        io.to(g.code).emit(ServerEvents.PLAYER_JOINED, {
+          players: g.getPlayersArray(),
+          newPlayer: g.getPlayer(g.hostId)!,
+        });
+      }
+    }
+  }, DISCONNECT_GRACE_PERIOD_MS);
+
+  pendingDisconnects.set(socket.id, {
+    timeout,
+    gameCode: game.code,
+    playerName: player.name,
+  });
+}
+
+// Handle explicit leave (user clicked leave button)
+function handlePlayerLeave(io: Server, socket: Socket, _explicit: boolean = false): void {
+  // Cancel any pending disconnect timeout
+  const pending = pendingDisconnects.get(socket.id);
+  if (pending) {
+    clearTimeout(pending.timeout);
+    pendingDisconnects.delete(socket.id);
+  }
+
   const result = gameManager.removePlayer(socket.id);
 
   if (result) {
@@ -462,7 +555,7 @@ function handlePlayerLeave(io: Server, socket: Socket): void {
     });
 
     // If host changed, notify
-    if (wasHost) {
+    if (wasHost && game.players.size > 0) {
       io.to(game.code).emit(ServerEvents.PLAYER_JOINED, {
         players: game.getPlayersArray(),
         newPlayer: game.getPlayer(game.hostId)!,

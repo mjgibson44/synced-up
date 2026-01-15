@@ -79,6 +79,15 @@ export class GameManager {
     return { game, wasHost };
   }
 
+  // Update player mapping when socket ID changes (reconnection)
+  updatePlayerMapping(oldPlayerId: string, newPlayerId: string): void {
+    const code = this.playerToGame.get(oldPlayerId);
+    if (code) {
+      this.playerToGame.delete(oldPlayerId);
+      this.playerToGame.set(newPlayerId, code);
+    }
+  }
+
   deleteGame(code: string): void {
     const game = this.games.get(code);
     if (game) {
