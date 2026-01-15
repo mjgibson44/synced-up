@@ -40,31 +40,20 @@ export function GatheringPhase() {
 
   return (
     <div className="gathering-phase">
-      <div className="phase-header">
-        <h1>Gathering Phase</h1>
+      <div className="phase-header gathering-header">
         <Timer timeRemaining={state.timeRemaining} />
+        {state.cluesPerPlayer > 1 && (
+          <span className="clue-progress-inline">
+            Clue {mySubmittedCount + 1} of {state.cluesPerPlayer}
+          </span>
+        )}
       </div>
 
       {!allSubmitted && currentSlot ? (
         <>
-          {state.cluesPerPlayer > 1 && (
-            <p className="clue-progress">
-              Clue {mySubmittedCount + 1} of {state.cluesPerPlayer}
-            </p>
-          )}
-
           <div className="clue-slot">
             <div className="spectrum-section">
               <Spectrum spectrum={currentSlot.spectrum} targetPosition={currentSlot.target} showTarget />
-            </div>
-
-            <div className="target-info">
-              <p>
-                Target: <strong>{currentSlot.target}</strong>
-              </p>
-              <p className="hint">
-                Write a clue that represents this position on the spectrum.
-              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="clue-form">
@@ -74,7 +63,7 @@ export function GatheringPhase() {
                   value={clueText}
                   onChange={(e) => setClueText(e.target.value)}
                   placeholder="Enter a word or phrase..."
-                  maxLength={100}
+                  maxLength={200}
                   autoFocus
                 />
               </div>

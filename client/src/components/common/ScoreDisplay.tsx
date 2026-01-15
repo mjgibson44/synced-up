@@ -16,13 +16,17 @@ export function ScoreDisplay() {
   }
 
   return (
-    <div className="score-display">
-      <div className="score-label">Score</div>
-      <div className="score-value">{myScore.totalPoints}</div>
+    <div className="score-bar">
+      <span className="score-bar-item">
+        <span className="score-bar-label">Score:</span>
+        <span className="score-bar-value">{myScore.totalPoints}</span>
+      </span>
       {myScore.rank > 0 && (
-        <div className="rank-info">
-          Rank: <span className="rank-value">#{myScore.rank}</span> of {state.scores.length}
-        </div>
+        <span className="score-bar-item">
+          <span className="score-bar-label">Rank:</span>
+          <span className="score-bar-rank">#{myScore.rank}</span>
+          <span className="score-bar-total">/{state.scores.length}</span>
+        </span>
       )}
     </div>
   );

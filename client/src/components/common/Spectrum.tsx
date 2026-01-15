@@ -20,10 +20,8 @@ export function Spectrum({ spectrum, targetPosition, guesses, showTarget = false
           <div
             className="spectrum-marker spectrum-marker-target"
             style={{ left: `${targetPosition}%` }}
-            title={`Target: ${targetPosition}`}
           >
             <div className="marker-line" />
-            <div className="marker-label">{targetPosition}</div>
           </div>
         )}
         {guesses?.map((guess, index) => (

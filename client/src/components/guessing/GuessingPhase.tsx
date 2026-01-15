@@ -44,7 +44,6 @@ export function GuessingPhase() {
           <div className="guess-card correct-answer-card">
             <div className="guess-card-header">
               <span className="guess-card-name correct-answer-label">Correct Answer</span>
-              <span className="guess-card-score">{actualPosition}</span>
             </div>
             <div className="guess-card-spectrum correct-answer-spectrum">
               <div className="mini-spectrum tall">
@@ -52,7 +51,6 @@ export function GuessingPhase() {
                 <div
                   className="mini-spectrum-target"
                   style={{ left: `${actualPosition}%` }}
-                  title={`Target: ${actualPosition}`}
                 />
               </div>
             </div>
@@ -81,18 +79,28 @@ export function GuessingPhase() {
           ))}
         </div>
 
-        {state.currentRound < state.totalRounds && (
+        {state.currentRound < state.totalRounds && state.isHost && (
           <div className="between-rounds-actions">
             <button className="btn btn-primary" onClick={startNextRound}>
-              Start Next Round
+              Next Round
             </button>
           </div>
         )}
-        {state.currentRound >= state.totalRounds && (
+        {state.currentRound < state.totalRounds && !state.isHost && (
+          <div className="between-rounds-actions">
+            <p className="waiting-for-host">Waiting for host to start next round...</p>
+          </div>
+        )}
+        {state.currentRound >= state.totalRounds && state.isHost && (
           <div className="between-rounds-actions">
             <button className="btn btn-primary" onClick={showFinalResults}>
               Show Final Summary
             </button>
+          </div>
+        )}
+        {state.currentRound >= state.totalRounds && !state.isHost && (
+          <div className="between-rounds-actions">
+            <p className="waiting-for-host">Waiting for host to show results...</p>
           </div>
         )}
       </div>
@@ -103,10 +111,8 @@ export function GuessingPhase() {
   if (isClueAuthor) {
     return (
       <div className="guessing-phase">
-        <div className="phase-header">
-          <h1>
-            Round {state.currentRound} of {state.totalRounds}
-          </h1>
+        <div className="phase-header compact">
+          <span className="round-label">Round {state.currentRound} of {state.totalRounds}</span>
           <Timer timeRemaining={state.timeRemaining} />
         </div>
 
@@ -145,13 +151,11 @@ export function GuessingPhase() {
     );
   }
 
-  // Regular player view - show spectrum and guess input
+  // Regular player view - show spectrum labels and guess input
   return (
     <div className="guessing-phase">
-      <div className="phase-header">
-        <h1>
-          Round {state.currentRound} of {state.totalRounds}
-        </h1>
+      <div className="phase-header compact">
+        <span className="round-label">Round {state.currentRound} of {state.totalRounds}</span>
         <Timer timeRemaining={state.timeRemaining} />
       </div>
 
@@ -162,14 +166,13 @@ export function GuessingPhase() {
         </p>
       </div>
 
-      <div className="spectrum-section">
-        <Spectrum spectrum={state.spectrum} />
-      </div>
-
       {!state.myGuessSubmitted ? (
         <form onSubmit={handleSubmit} className="guess-form">
-          <div className="form-group">
-            <label htmlFor="guess">Your Guess</label>
+          <div className="guess-input-section">
+            <div className="spectrum-labels-inline">
+              <span className="spectrum-label-left">{state.spectrum.left}</span>
+              <span className="spectrum-label-right">{state.spectrum.right}</span>
+            </div>
             <input
               id="guess"
               type="range"
@@ -180,9 +183,11 @@ export function GuessingPhase() {
               className="guess-slider"
             />
           </div>
-          <button type="submit" className="btn btn-primary">
-            Submit Guess
-          </button>
+          <div className="guess-submit-container">
+            <button type="submit" className="btn btn-primary">
+              Submit Guess
+            </button>
+          </div>
         </form>
       ) : (
         <div className="submitted-message">
