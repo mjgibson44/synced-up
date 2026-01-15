@@ -96,6 +96,7 @@ export function getGatheringTimeLimit(playerCount: number): number {
 export const ClientEvents = {
   CREATE_GAME: 'create_game',
   JOIN_GAME: 'join_game',
+  REJOIN_GAME: 'rejoin_game',
   START_GAME: 'start_game',
   SUBMIT_CLUE: 'submit_clue',
   SUBMIT_GUESS: 'submit_guess',
@@ -122,6 +123,7 @@ export const ServerEvents = {
   TIMER_UPDATE: 'timer_update',
   SPECTRUM_REGENERATED: 'spectrum_regenerated',
   RETURNED_TO_LOBBY: 'returned_to_lobby',
+  REJOINED_GAME: 'rejoined_game',
   ERROR: 'error',
 } as const;
 
@@ -231,4 +233,40 @@ export interface SpectrumRegeneratedPayload {
 
 export interface ReturnToLobbyPayload {
   players: Player[];
+}
+
+export interface RejoinGamePayload {
+  gameCode: string;
+  playerName: string;
+}
+
+export interface RejoinedGamePayload {
+  gameCode: string;
+  playerId: string;
+  isHost: boolean;
+  players: Player[];
+  phase: GamePhase;
+  // Current game state depending on phase
+  cluesPerPlayer?: number;
+  timeRemaining?: number;
+  myClueSlots?: ClueSlot[];
+  myCluesSubmitted?: boolean[];
+  submittedClueCount?: number;
+  totalClues?: number;
+  // Guessing phase state
+  currentRound?: number;
+  totalRounds?: number;
+  currentClue?: string;
+  currentAuthorId?: string;
+  currentAuthorName?: string;
+  spectrum?: Spectrum;
+  myGuessSubmitted?: boolean;
+  submittedGuessCount?: number;
+  expectedGuessCount?: number;
+  // Round results
+  roundResult?: RoundResult;
+  scores?: PlayerScore[];
+  // Final results
+  finalScores?: PlayerScore[];
+  winner?: Player;
 }

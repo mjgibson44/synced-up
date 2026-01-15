@@ -5,6 +5,7 @@ import {
   ServerEvents,
   CreateGamePayload,
   JoinGamePayload,
+  RejoinGamePayload,
   StartGamePayload,
   SubmitCluePayload,
   SubmitGuessPayload,
@@ -102,6 +103,95 @@ export function registerGameHandlers(io: Server, socket: Socket): void {
     io.to(code).emit(ServerEvents.PLAYER_JOINED, {
       players,
       newPlayer,
+    });
+  });
+
+  // Rejoin an existing game after reconnection
+  socket.on(ClientEvents.REJOIN_GAME, (payload: RejoinGamePayload) => {
+    const { gameCode, playerName } = payload;
+
+    if (!playerName || playerName.trim().length === 0) {
+      socket.emit(ServerEvents.ERROR, {
+        message: 'Name is required',
+        code: 'INVALID_NAME',
+      });
+      return;
+    }
+
+    const code = gameCode.toUpperCase().trim();
+    const game = gameManager.getGame(code);
+
+    if (!game) {
+      socket.emit(ServerEvents.ERROR, {
+        message: 'Game not found',
+        code: 'GAME_NOT_FOUND',
+      });
+      return;
+    }
+
+    // Try to rejoin as existing player
+    const player = game.rejoinPlayer('', socket.id, playerName.trim());
+
+    if (!player) {
+      socket.emit(ServerEvents.ERROR, {
+        message: 'Could not rejoin - player not found in game',
+        code: 'REJOIN_FAILED',
+      });
+      return;
+    }
+
+    // Join the socket room
+    socket.join(code);
+
+    // Build the state payload based on current phase
+    const currentClue = game.getCurrentClue();
+    const statePayload: Record<string, unknown> = {
+      gameCode: code,
+      playerId: socket.id,
+      isHost: player.isHost,
+      players: game.getPlayersArray(),
+      phase: game.phase,
+      scores: game.getScores(),
+    };
+
+    if (game.phase === 'gathering') {
+      statePayload.cluesPerPlayer = game.cluesPerPlayer;
+      statePayload.timeRemaining = game.getTimeRemaining();
+      statePayload.myClueSlots = game.getPlayerClueSlots(socket.id);
+      statePayload.myCluesSubmitted = game.getPlayerClueSubmissionStatus(socket.id);
+      statePayload.submittedClueCount = game.getSubmittedClueCount();
+      statePayload.totalClues = game.getTotalExpectedClues();
+    } else if (game.phase === 'guessing' || game.phase === 'reviewing') {
+      statePayload.currentRound = game.currentRound + 1;
+      statePayload.totalRounds = game.getTotalRounds();
+      statePayload.timeRemaining = game.getTimeRemaining();
+      if (currentClue) {
+        statePayload.currentClue = currentClue.clue;
+        statePayload.currentAuthorId = currentClue.playerId;
+        statePayload.currentAuthorName = currentClue.playerName;
+        statePayload.spectrum = currentClue.spectrum;
+      }
+      statePayload.myGuessSubmitted = game.hasSubmittedGuess(socket.id);
+      statePayload.submittedGuessCount = game.getSubmittedGuessCount();
+      statePayload.expectedGuessCount = game.getExpectedGuessCount();
+
+      if (game.phase === 'reviewing') {
+        statePayload.roundResult = game.getLastRoundResult();
+      }
+    } else if (game.phase === 'results') {
+      statePayload.finalScores = game.getScores();
+      const scores = game.getScores();
+      if (scores.length > 0) {
+        statePayload.winner = game.getPlayer(scores[0].playerId);
+      }
+    }
+
+    socket.emit(ServerEvents.REJOINED_GAME, statePayload);
+
+    // Notify other players that this player reconnected
+    socket.to(code).emit(ServerEvents.PLAYER_JOINED, {
+      players: game.getPlayersArray(),
+      newPlayer: player,
     });
   });
 

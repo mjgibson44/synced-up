@@ -434,4 +434,84 @@ export class Game {
   getTotalRounds(): number {
     return this.clueOrder.length;
   }
+
+  // Rejoin a player with a new socket ID
+  rejoinPlayer(oldPlayerId: string, newSocketId: string, playerName: string): Player | null {
+    // Find the player by name
+    let existingPlayer: Player | null = null;
+    let existingPlayerId: string | null = null;
+
+    for (const [id, player] of this.players) {
+      if (player.name.toLowerCase() === playerName.toLowerCase()) {
+        existingPlayer = player;
+        existingPlayerId = id;
+        break;
+      }
+    }
+
+    if (!existingPlayer || !existingPlayerId) {
+      return null;
+    }
+
+    // Update player with new socket ID
+    this.players.delete(existingPlayerId);
+    existingPlayer.id = newSocketId;
+    existingPlayer.isConnected = true;
+    this.players.set(newSocketId, existingPlayer);
+
+    // Update host ID if this was the host
+    if (this.hostId === existingPlayerId) {
+      this.hostId = newSocketId;
+    }
+
+    // Update clue slots mapping
+    const clueSlots = this.playerClueSlots.get(existingPlayerId);
+    if (clueSlots) {
+      this.playerClueSlots.delete(existingPlayerId);
+      this.playerClueSlots.set(newSocketId, clueSlots);
+    }
+
+    // Update submitted clues mapping
+    const submittedClues = this.playerSubmittedClues.get(existingPlayerId);
+    if (submittedClues) {
+      this.playerSubmittedClues.delete(existingPlayerId);
+      this.playerSubmittedClues.set(newSocketId, submittedClues);
+    }
+
+    // Update scores mapping
+    const playerScores = this.scores.get(existingPlayerId);
+    if (playerScores) {
+      this.scores.delete(existingPlayerId);
+      this.scores.set(newSocketId, playerScores);
+    }
+
+    // Update guesses mapping for current round
+    const currentGuess = this.guesses.get(existingPlayerId);
+    if (currentGuess !== undefined) {
+      this.guesses.delete(existingPlayerId);
+      this.guesses.set(newSocketId, currentGuess);
+    }
+
+    // Update allClues to reference new player ID
+    for (const clue of this.allClues) {
+      if (clue.playerId === existingPlayerId) {
+        clue.playerId = newSocketId;
+      }
+    }
+
+    return existingPlayer;
+  }
+
+  // Get player's clue submission status
+  getPlayerClueSubmissionStatus(playerId: string): boolean[] {
+    const submitted = this.playerSubmittedClues.get(playerId);
+    if (!submitted) return [];
+    return submitted.map((clue) => clue !== null);
+  }
+
+  // Get the last round result if in reviewing phase
+  getLastRoundResult(): RoundResult | null {
+    if (this.roundResults.length === 0) return null;
+    return this.roundResults[this.roundResults.length - 1];
+  }
 }

@@ -1,9 +1,10 @@
-import { Player, Spectrum, RoundResult, PlayerScore, GamePhase, ClueSlot } from 'shared';
+import { Player, Spectrum, RoundResult, PlayerScore, GamePhase, ClueSlot, RejoinedGamePayload } from 'shared';
 
 export interface GameState {
   // Connection
   connected: boolean;
   playerId: string | null;
+  playerName: string | null; // Track player name for rejoin
 
   // Game info
   gameCode: string | null;
@@ -71,11 +72,14 @@ export type GameAction =
   | { type: 'RESET_GAME' }
   | { type: 'SET_IS_HOST'; payload: boolean }
   | { type: 'SET_GAME_CODE'; payload: string }
-  | { type: 'RETURNED_TO_LOBBY'; payload: { players: Player[] } };
+  | { type: 'SET_PLAYER_NAME'; payload: string }
+  | { type: 'RETURNED_TO_LOBBY'; payload: { players: Player[] } }
+  | { type: 'REJOINED_GAME'; payload: RejoinedGamePayload };
 
 export const initialGameState: GameState = {
   connected: false,
   playerId: null,
+  playerName: null,
   gameCode: null,
   gameUrl: null,
   isHost: false,

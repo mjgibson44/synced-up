@@ -17,6 +17,7 @@ import {
   GameCreatedPayload,
   SpectrumRegeneratedPayload,
   ReturnToLobbyPayload,
+  RejoinedGamePayload,
 } from 'shared';
 import { GameState, GameAction, initialGameState } from '../types/game';
 
@@ -176,6 +177,43 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         gameCode: action.payload,
       };
 
+    case 'SET_PLAYER_NAME':
+      return {
+        ...state,
+        playerName: action.payload,
+      };
+
+    case 'REJOINED_GAME': {
+      const payload = action.payload;
+      return {
+        ...state,
+        gameCode: payload.gameCode,
+        playerId: payload.playerId,
+        isHost: payload.isHost,
+        players: payload.players,
+        phase: payload.phase,
+        cluesPerPlayer: payload.cluesPerPlayer ?? state.cluesPerPlayer,
+        timeRemaining: payload.timeRemaining ?? 0,
+        myClueSlots: payload.myClueSlots ?? [],
+        myCluesSubmitted: payload.myCluesSubmitted ?? [],
+        submittedClueCount: payload.submittedClueCount ?? 0,
+        totalClues: payload.totalClues ?? 0,
+        currentRound: payload.currentRound ?? 0,
+        totalRounds: payload.totalRounds ?? 0,
+        currentClue: payload.currentClue ?? null,
+        currentAuthorId: payload.currentAuthorId ?? null,
+        currentAuthorName: payload.currentAuthorName ?? null,
+        spectrum: payload.spectrum ?? null,
+        myGuessSubmitted: payload.myGuessSubmitted ?? false,
+        submittedGuessCount: payload.submittedGuessCount ?? 0,
+        expectedGuessCount: payload.expectedGuessCount ?? 0,
+        roundResult: payload.roundResult ?? null,
+        scores: payload.scores ?? [],
+        finalScores: payload.finalScores ?? [],
+        winner: payload.winner ?? null,
+      };
+    }
+
     case 'RETURNED_TO_LOBBY':
       return {
         ...state,
@@ -233,6 +271,71 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     dispatch({ type: 'SET_CONNECTED', payload: connected });
   }, [connected]);
+
+  // Save session info to localStorage when in a game
+  useEffect(() => {
+    if (state.gameCode && state.playerName && state.phase !== 'landing') {
+      const sessionData = {
+        gameCode: state.gameCode,
+        playerName: state.playerName,
+      };
+      localStorage.setItem('wavelength_session', JSON.stringify(sessionData));
+    }
+  }, [state.gameCode, state.playerName, state.phase]);
+
+  // Auto-rejoin on socket reconnection
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleReconnect = () => {
+      console.log('Socket reconnected, checking for session to rejoin...');
+
+      // Check localStorage for session info
+      const sessionStr = localStorage.getItem('wavelength_session');
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          if (session.gameCode && session.playerName) {
+            console.log('Attempting to rejoin game:', session.gameCode);
+            socket.emit(ClientEvents.REJOIN_GAME, {
+              gameCode: session.gameCode,
+              playerName: session.playerName,
+            });
+          }
+        } catch (e) {
+          console.error('Failed to parse session data:', e);
+          localStorage.removeItem('wavelength_session');
+        }
+      }
+    };
+
+    socket.on('reconnect', handleReconnect);
+
+    // Also try to rejoin on initial connect if we have a stored session
+    // but only if we're on the landing page (not already in a game)
+    if (socket.connected && state.phase === 'landing') {
+      const sessionStr = localStorage.getItem('wavelength_session');
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          if (session.gameCode && session.playerName) {
+            console.log('Found stored session, attempting to rejoin:', session.gameCode);
+            socket.emit(ClientEvents.REJOIN_GAME, {
+              gameCode: session.gameCode,
+              playerName: session.playerName,
+            });
+          }
+        } catch (e) {
+          console.error('Failed to parse session data:', e);
+          localStorage.removeItem('wavelength_session');
+        }
+      }
+    }
+
+    return () => {
+      socket.off('reconnect', handleReconnect);
+    };
+  }, [socket, state.phase]);
 
   // Set up socket event listeners
   useEffect(() => {
@@ -306,6 +409,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'RETURNED_TO_LOBBY', payload: { players: payload.players } });
     });
 
+    socket.on(ServerEvents.REJOINED_GAME, (payload: RejoinedGamePayload) => {
+      console.log('Rejoined game successfully:', payload);
+      dispatch({ type: 'REJOINED_GAME', payload });
+    });
+
     socket.on(ServerEvents.ERROR, (payload: ErrorPayload) => {
       dispatch({ type: 'SET_ERROR', payload: payload.message });
     });
@@ -325,6 +433,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       socket.off(ServerEvents.GAME_COMPLETE);
       socket.off(ServerEvents.TIMER_UPDATE);
       socket.off(ServerEvents.RETURNED_TO_LOBBY);
+      socket.off(ServerEvents.REJOINED_GAME);
       socket.off(ServerEvents.ERROR);
     };
   }, [socket]);
@@ -332,6 +441,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const createGame = useCallback(
     (hostName: string) => {
       if (socket) {
+        dispatch({ type: 'SET_PLAYER_NAME', payload: hostName });
         socket.emit(ClientEvents.CREATE_GAME, { hostName });
       }
     },
@@ -341,8 +451,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const joinGame = useCallback(
     (gameCode: string, playerName: string) => {
       if (socket) {
-        // Store the game code and player ID immediately when attempting to join
+        // Store the game code, player name, and player ID
         dispatch({ type: 'SET_GAME_CODE', payload: gameCode.toUpperCase() });
+        dispatch({ type: 'SET_PLAYER_NAME', payload: playerName });
         if (socket.id) {
           dispatch({ type: 'SET_PLAYER_ID', payload: socket.id });
         }
@@ -408,6 +519,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const leaveGame = useCallback(() => {
     if (socket) {
       socket.emit(ClientEvents.LEAVE_GAME);
+      localStorage.removeItem('wavelength_session');
       dispatch({ type: 'RESET_GAME' });
     }
   }, [socket]);
