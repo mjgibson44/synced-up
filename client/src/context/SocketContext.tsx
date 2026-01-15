@@ -16,7 +16,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    const newSocket = io('/', {
+    const serverUrl = import.meta.env.VITE_SERVER_URL || '/';
+    const newSocket = io(serverUrl, {
       transports: ['websocket', 'polling'],
     });
 
