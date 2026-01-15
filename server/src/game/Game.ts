@@ -313,11 +313,11 @@ export class Game {
     return this.guesses.size === this.getExpectedGuessCount();
   }
 
-  // Calculate points from distance using steep dropoff curve
+  // Calculate points from distance using cosine curve
   private calculatePoints(distance: number): number {
-    // Exponential decay: 100 * e^(-distance/25)
-    // 0 away = 100pts, 10 away = 67pts, 25 away = 37pts, 50 away = 14pts
-    return Math.round(100 * Math.exp(-distance / 25));
+    // cos(x/32) * 100 - allows negative scores for far guesses
+    // 0 away = 100pts, 25 away = 71pts, 50 away = 0pts, 75 away = -62pts, 100 away = -100pts
+    return Math.round(Math.cos(distance / 32) * 100);
   }
 
   // Calculate results for the current round
