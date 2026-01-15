@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
 import { SocketProvider } from './context/SocketContext';
 import { GameProvider, useGame } from './context/GameContext';

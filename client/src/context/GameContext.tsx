@@ -343,7 +343,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (socket) {
         // Store the game code and player ID immediately when attempting to join
         dispatch({ type: 'SET_GAME_CODE', payload: gameCode.toUpperCase() });
-        dispatch({ type: 'SET_PLAYER_ID', payload: socket.id });
+        if (socket.id) {
+          dispatch({ type: 'SET_PLAYER_ID', payload: socket.id });
+        }
         socket.emit(ClientEvents.JOIN_GAME, { gameCode, playerName });
       }
     },

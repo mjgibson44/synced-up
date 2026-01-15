@@ -1,4 +1,3 @@
-import React from 'react';
 import { Spectrum as SpectrumType } from 'shared';
 
 interface SpectrumProps {
