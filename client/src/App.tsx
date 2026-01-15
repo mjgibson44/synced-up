@@ -6,6 +6,7 @@ import { Lobby } from './components/lobby/Lobby';
 import { GatheringPhase } from './components/gathering/GatheringPhase';
 import { GuessingPhase } from './components/guessing/GuessingPhase';
 import { FinalResults } from './components/results/FinalResults';
+import { ScoreDisplay } from './components/common/ScoreDisplay';
 import './styles/globals.css';
 
 function GameRouter() {
@@ -60,6 +61,7 @@ function App() {
     <BrowserRouter>
       <SocketProvider>
         <GameProvider>
+          <ScoreDisplay />
           <div className="app">
             <Routes>
               <Route path="/" element={<GameRouter />} />

@@ -205,31 +205,38 @@ export class Game {
     this.currentRound = 0;
     this.allClues = [];
 
-    // Build flat array of all submitted clues
-    for (const [playerId, submitted] of this.playerSubmittedClues) {
-      const player = this.players.get(playerId);
-      const slots = this.playerClueSlots.get(playerId);
+    // Build flat array of all submitted clues, ordered by clue index first
+    // This ensures we cycle through all players' first clue, then second, etc.
+    const playerIds = Array.from(this.players.keys());
 
-      if (!player || !slots) continue;
+    for (let clueIdx = 0; clueIdx < this.cluesPerPlayer; clueIdx++) {
+      // Shuffle player order for each clue round
+      const shuffledPlayerIds = [...playerIds];
+      this.shuffleArray(shuffledPlayerIds);
 
-      for (let i = 0; i < submitted.length; i++) {
-        const clueText = submitted[i];
+      for (const playerId of shuffledPlayerIds) {
+        const player = this.players.get(playerId);
+        const slots = this.playerClueSlots.get(playerId);
+        const submitted = this.playerSubmittedClues.get(playerId);
+
+        if (!player || !slots || !submitted) continue;
+
+        const clueText = submitted[clueIdx];
         if (clueText !== null) {
           this.allClues.push({
             playerId,
             playerName: player.name,
             clue: clueText,
-            target: slots[i].target,
-            spectrum: slots[i].spectrum,
-            clueIndex: i,
+            target: slots[clueIdx].target,
+            spectrum: slots[clueIdx].spectrum,
+            clueIndex: clueIdx,
           });
         }
       }
     }
 
-    // Create shuffled order of clue indices
+    // Clue order is now already set correctly, just use sequential order
     this.clueOrder = this.allClues.map((_, i) => i);
-    this.shuffleArray(this.clueOrder);
   }
 
   private shuffleArray<T>(array: T[]): void {

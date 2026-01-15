@@ -37,12 +37,28 @@ export function GuessingPhase() {
             <span className="clue-author">{state.roundResult.authorName}'s clue:</span>
             <span className="clue-text">"{state.roundResult.clue}"</span>
           </p>
-          <p className="actual-position">
-            Actual position: <strong>{actualPosition}</strong>
-          </p>
         </div>
 
         <div className="guesses-list-new">
+          {/* Correct Answer card at top */}
+          <div className="guess-card correct-answer-card">
+            <div className="guess-card-header">
+              <span className="guess-card-name correct-answer-label">Correct Answer</span>
+              <span className="guess-card-score">{actualPosition}</span>
+            </div>
+            <div className="guess-card-spectrum correct-answer-spectrum">
+              <div className="mini-spectrum tall">
+                <div className="mini-spectrum-bar" />
+                <div
+                  className="mini-spectrum-target"
+                  style={{ left: `${actualPosition}%` }}
+                  title={`Target: ${actualPosition}`}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Player guesses */}
           {sortedGuesses.map((g, i) => (
             <div key={g.playerId} className="guess-card">
               <div className="guess-card-header">
@@ -54,11 +70,6 @@ export function GuessingPhase() {
               <div className="guess-card-spectrum">
                 <div className="mini-spectrum">
                   <div className="mini-spectrum-bar" />
-                  <div
-                    className="mini-spectrum-target"
-                    style={{ left: `${actualPosition}%` }}
-                    title={`Target: ${actualPosition}`}
-                  />
                   <div
                     className="mini-spectrum-guess"
                     style={{ left: `${g.guess}%`, backgroundColor: getPlayerColor(i) }}
@@ -88,7 +99,7 @@ export function GuessingPhase() {
     );
   }
 
-  // Clue author view - just show waiting message, no spectrum input
+  // Clue author view - show spectrum but no guess input
   if (isClueAuthor) {
     return (
       <div className="guessing-phase">
@@ -104,6 +115,10 @@ export function GuessingPhase() {
             <span className="clue-author">Your clue:</span>
             <span className="clue-text">"{state.currentClue}"</span>
           </p>
+        </div>
+
+        <div className="spectrum-section">
+          <Spectrum spectrum={state.spectrum} />
         </div>
 
         <div className="author-waiting">
