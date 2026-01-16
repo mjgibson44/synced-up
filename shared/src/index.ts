@@ -86,11 +86,10 @@ export function getCluesPerPlayer(playerCount: number): number {
   return 1;
 }
 
-// Calculate gathering time limit: 2 minutes per total clue
+// Calculate gathering time limit: 2 minutes per clue (per player, not total)
 export function getGatheringTimeLimit(playerCount: number): number {
   const cluesPerPlayer = getCluesPerPlayer(playerCount);
-  const totalClues = playerCount * cluesPerPlayer;
-  return totalClues * 120; // 2 minutes (120 seconds) per clue
+  return cluesPerPlayer * 120; // 2 minutes (120 seconds) per clue each player writes
 }
 
 // Socket event names - Client to Server

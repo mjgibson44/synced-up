@@ -315,9 +315,9 @@ export class Game {
 
   // Calculate points from distance using quadratic curve
   private calculatePoints(distance: number): number {
-    // 100 - 3.5d + d²/200 - rewards precision, penalizes far guesses
-    // 0 away = 100pts, 15 away = 49pts, 20 away = 32pts, 30 away = 0pts, 50 away = -62pts
-    return Math.round(100 - 3.5 * distance + (distance * distance) / 200);
+    // 100 - 2d - d²/200 - rewards precision, gentle penalty for far guesses
+    // 0 away = 100pts, 10 away = 80pts, 20 away = 58pts, 30 away = 36pts, 50 away = -12pts
+    return Math.round(100 - 2 * distance - (distance * distance) / 200);
   }
 
   // Calculate median of an array of numbers
