@@ -10,7 +10,8 @@ export function ScoreDisplay() {
   }
 
   // Check if all other players have left (host is alone in an active game)
-  const isActiveGame = state.phase !== 'lobby' && state.phase !== 'landing';
+  // Note: 'landing' phase already handled above with early return
+  const isActiveGame = state.phase !== 'lobby' && state.phase !== 'results';
   const allPlayersLeft = state.isHost && isActiveGame && state.players.length < 2;
 
   const handleLeave = () => {
