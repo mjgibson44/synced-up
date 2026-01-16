@@ -283,14 +283,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.gameCode, state.playerName, state.phase]);
 
-  // Auto-rejoin on socket reconnection
+  // Auto-rejoin on socket connection/reconnection
   useEffect(() => {
     if (!socket) return;
 
-    const handleReconnect = () => {
-      console.log('Socket reconnected, checking for session to rejoin...');
+    const attemptRejoin = () => {
+      // Only attempt rejoin if we're on the landing page
+      if (state.phase !== 'landing') return;
 
-      // Check localStorage for session info
       const sessionStr = localStorage.getItem('wavelength_session');
       if (sessionStr) {
         try {
@@ -309,30 +309,26 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    const handleConnect = () => {
+      console.log('Socket connected, checking for session to rejoin...');
+      attemptRejoin();
+    };
+
+    const handleReconnect = () => {
+      console.log('Socket reconnected, checking for session to rejoin...');
+      attemptRejoin();
+    };
+
+    socket.on('connect', handleConnect);
     socket.on('reconnect', handleReconnect);
 
-    // Also try to rejoin on initial connect if we have a stored session
-    // but only if we're on the landing page (not already in a game)
-    if (socket.connected && state.phase === 'landing') {
-      const sessionStr = localStorage.getItem('wavelength_session');
-      if (sessionStr) {
-        try {
-          const session = JSON.parse(sessionStr);
-          if (session.gameCode && session.playerName) {
-            console.log('Found stored session, attempting to rejoin:', session.gameCode);
-            socket.emit(ClientEvents.REJOIN_GAME, {
-              gameCode: session.gameCode,
-              playerName: session.playerName,
-            });
-          }
-        } catch (e) {
-          console.error('Failed to parse session data:', e);
-          localStorage.removeItem('wavelength_session');
-        }
-      }
+    // Also try immediately if already connected
+    if (socket.connected) {
+      attemptRejoin();
     }
 
     return () => {
+      socket.off('connect', handleConnect);
       socket.off('reconnect', handleReconnect);
     };
   }, [socket, state.phase]);
