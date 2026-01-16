@@ -1,19 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGame } from '../../context/GameContext';
 import { Spectrum } from '../common/Spectrum';
 
 export function GatheringPhase() {
   const { state, submitClue, regenerateSpectrum } = useGame();
   const [clueText, setClueText] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Find the current clue index (first unsubmitted clue)
   const currentClueIndex = state.myCluesSubmitted.findIndex((submitted) => !submitted);
   const allSubmitted = currentClueIndex === -1;
   const currentSlot = !allSubmitted ? state.myClueSlots[currentClueIndex] : null;
 
-  // Clear clue text when moving to a new clue
+  // Clear clue text and focus input when moving to a new clue
   useEffect(() => {
     setClueText('');
+    // Focus input after state updates
+    setTimeout(() => inputRef.current?.focus(), 0);
   }, [currentClueIndex]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -21,6 +24,8 @@ export function GatheringPhase() {
     if (clueText.trim() && currentClueIndex !== -1) {
       submitClue(clueText.trim(), currentClueIndex);
       setClueText('');
+      // Keep focus on input for next clue
+      inputRef.current?.focus();
     }
   };
 
@@ -47,6 +52,7 @@ export function GatheringPhase() {
             <form onSubmit={handleSubmit} className="clue-form">
               <div className="form-group">
                 <input
+                  ref={inputRef}
                   type="text"
                   value={clueText}
                   onChange={(e) => setClueText(e.target.value)}

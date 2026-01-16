@@ -37,6 +37,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         playerId: action.payload.playerId,
         isHost: true,
         phase: 'lobby',
+        error: null,
       };
 
     case 'PLAYER_JOINED':
@@ -44,6 +45,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         players: action.payload.players,
         phase: state.phase === 'landing' ? 'lobby' : state.phase,
+        error: null,
       };
 
     case 'PLAYER_LEFT':
@@ -192,6 +194,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         isHost: payload.isHost,
         players: payload.players,
         phase: payload.phase,
+        error: null,
         cluesPerPlayer: payload.cluesPerPlayer ?? state.cluesPerPlayer,
         timeRemaining: payload.timeRemaining ?? 0,
         myClueSlots: payload.myClueSlots ?? [],
@@ -411,6 +414,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     });
 
     socket.on(ServerEvents.ERROR, (payload: ErrorPayload) => {
+      // Clear localStorage if game not found (stale session)
+      if (payload.code === 'GAME_NOT_FOUND' || payload.code === 'REJOIN_FAILED') {
+        localStorage.removeItem('wavelength_session');
+      }
       dispatch({ type: 'SET_ERROR', payload: payload.message });
     });
 
@@ -437,6 +444,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const createGame = useCallback(
     (hostName: string) => {
       if (socket) {
+        dispatch({ type: 'SET_ERROR', payload: null }); // Clear any stale errors
         dispatch({ type: 'SET_PLAYER_NAME', payload: hostName });
         socket.emit(ClientEvents.CREATE_GAME, { hostName });
       }
@@ -447,6 +455,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const joinGame = useCallback(
     (gameCode: string, playerName: string) => {
       if (socket) {
+        dispatch({ type: 'SET_ERROR', payload: null }); // Clear any stale errors
         // Store the game code, player name, and player ID
         dispatch({ type: 'SET_GAME_CODE', payload: gameCode.toUpperCase() });
         dispatch({ type: 'SET_PLAYER_NAME', payload: playerName });

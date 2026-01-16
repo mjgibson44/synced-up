@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useGame } from '../../context/GameContext';
 
 export function Lobby() {
-  const { state, startGame, leaveGame } = useGame();
+  const { state, startGame } = useGame();
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = async () => {
@@ -74,9 +74,6 @@ export function Lobby() {
       {state.error && <div className="error-message">{state.error}</div>}
 
       <div className="lobby-actions">
-        <button className="btn btn-secondary" onClick={leaveGame}>
-          Leave Game
-        </button>
         {state.isHost && (
           <button
             className="btn btn-primary"

@@ -995,3 +995,42 @@ body {
     font-size: 24px;
   }
 }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--surface);
+  border-radius: var(--border-radius);
+  padding: 32px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+}
+
+.modal h2 {
+  margin-bottom: 24px;
+  font-size: 20px;
+  color: var(--text-primary);
+}
+
+.modal p {
+  margin-bottom: 24px;
+  color: var(--text-secondary);
+}
+
+.modal .btn {
+  min-width: 160px;
+}

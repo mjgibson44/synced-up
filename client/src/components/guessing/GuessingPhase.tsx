@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGame } from '../../context/GameContext';
 import { Spectrum } from '../common/Spectrum';
 
 export function GuessingPhase() {
   const { state, submitGuess, startNextRound, showFinalResults } = useGame();
   const [guess, setGuess] = useState(50);
+
+  // Reset guess to center when round changes
+  useEffect(() => {
+    setGuess(50);
+  }, [state.currentRound]);
 
   const isClueAuthor = state.playerId === state.currentAuthorId;
 

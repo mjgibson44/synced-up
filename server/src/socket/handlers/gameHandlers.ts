@@ -446,7 +446,7 @@ export function registerGameHandlers(io: Server, socket: Socket): void {
     });
   });
 
-  // Return to lobby (any player can trigger from results phase)
+  // Return to lobby (any player from results, or host from any phase)
   socket.on(ClientEvents.RETURN_TO_LOBBY, (payload: { gameCode: string }) => {
     const { gameCode } = payload;
     const game = gameManager.getGame(gameCode);
@@ -459,17 +459,19 @@ export function registerGameHandlers(io: Server, socket: Socket): void {
       return;
     }
 
-    if (game.phase !== 'results') {
-      return; // Only allow from results phase
+    // Allow from results phase (any player) or from any active phase (host only)
+    const isHost = game.hostId === socket.id;
+    const isActiveGame = game.phase !== 'lobby' && game.phase !== 'results';
+
+    if (game.phase === 'results' || (isHost && isActiveGame)) {
+      // Reset the game to lobby state
+      game.resetToLobby();
+
+      // Notify all players
+      io.to(game.code).emit(ServerEvents.RETURNED_TO_LOBBY, {
+        players: game.getPlayersArray(),
+      });
     }
-
-    // Reset the game to lobby state
-    game.resetToLobby();
-
-    // Notify all players
-    io.to(game.code).emit(ServerEvents.RETURNED_TO_LOBBY, {
-      players: game.getPlayersArray(),
-    });
   });
 
   // Leave game - explicit leave, remove immediately
