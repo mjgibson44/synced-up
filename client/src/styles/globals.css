@@ -792,6 +792,28 @@ body {
   color: var(--text-secondary);
 }
 
+.leave-button {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.leave-button:hover {
+  color: var(--error);
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
 /* Final Results */
 .final-results {
   padding: 40px 0;

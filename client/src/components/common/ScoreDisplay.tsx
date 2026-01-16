@@ -2,11 +2,40 @@ import { useGame } from '../../context/GameContext';
 import { Timer } from './Timer';
 
 export function ScoreDisplay() {
-  const { state } = useGame();
+  const { state, leaveGame } = useGame();
 
-  // Don't show on landing or lobby
-  if (state.phase === 'landing' || state.phase === 'lobby') {
+  // Don't show on landing
+  if (state.phase === 'landing') {
     return null;
+  }
+
+  const handleLeave = () => {
+    if (confirm('Are you sure you want to leave the game?')) {
+      leaveGame();
+    }
+  };
+
+  // Leave button component
+  const LeaveButton = () => (
+    <button className="leave-button" onClick={handleLeave} title="Leave Game">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+        <polyline points="16 17 21 12 16 7" />
+        <line x1="21" y1="12" x2="9" y2="12" />
+      </svg>
+    </button>
+  );
+
+  // Lobby phase: just show leave button
+  if (state.phase === 'lobby') {
+    return (
+      <div className="score-bar">
+        <span className="score-bar-item">
+          <span className="score-bar-phase">Lobby</span>
+        </span>
+        <LeaveButton />
+      </div>
+    );
   }
 
   // Gathering phase: show clue progress and timer
@@ -21,6 +50,7 @@ export function ScoreDisplay() {
           </span>
         )}
         <Timer timeRemaining={state.timeRemaining} />
+        <LeaveButton />
       </div>
     );
   }
@@ -52,6 +82,7 @@ export function ScoreDisplay() {
           )}
         </>
       )}
+      <LeaveButton />
     </div>
   );
 }
